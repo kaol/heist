@@ -37,6 +37,7 @@ tests = [ testCase     "compiled/simple"       simpleCompiledTest
         , testCase     "compiled/namespace5"    namespaceTest5
         , testCase     "compiled/nsbind"        nsBindTest
         , testCase     "compiled/nsbinderr"     nsBindErrorTest
+        , testCase     "compiled/nsbindcall"    nsBindCallTest
         ]
 
 simpleCompiledTest :: IO ()
@@ -141,9 +142,14 @@ nsBindTemplateHC = HeistConfig sc "h" False
                 & scTemplateLocations .~ [loadTemplates "templates-nsbind"]
 
 nsBindTestSplices :: Splices (Splice IO)
-nsBindTestSplices = "main" ## do
-    tpl <- withSplices runChildren nsBindSubSplices (return ())
-    return $ yieldRuntime $ codeGen tpl
+nsBindTestSplices = do
+    "main" ## do
+        tpl <- withSplices runChildren nsBindSubSplices (return ())
+        return $ yieldRuntime $ codeGen tpl
+    "call" ## do
+        tpl <- withSplices (callTemplate "_call")
+               nsBindSubSplices (return ())
+        return $ yieldRuntime $ codeGen tpl
 
 nsBindSubSplices :: Splices (RuntimeSplice IO () -> Splice IO)
 nsBindSubSplices = mapV (pureSplice . textSplice) $
@@ -175,3 +181,17 @@ nsBindErrorTest = do
         return $ toByteString b
 
     H.assertEqual "namespace bind error test" (Left ["templates-nsbind/nsbinderror.tpl: No splice bound for h:invalid"])  res
+
+
+nsBindCallTest :: IO ()
+nsBindCallTest = do
+    res <- runExceptT $ do
+        hs <- ExceptT $ initHeist $ nsBindTemplateHC
+        runner <- noteT ["Error rendering"] $ hoistMaybe $
+                    renderTemplate hs "nsbindcall"
+        b <- lift $ fst runner
+        return $ toByteString b
+
+    H.assertEqual "namespace bind call test" (Right expected) res
+  where
+    expected = "Alpha\nasdf&#10;&#10;"
