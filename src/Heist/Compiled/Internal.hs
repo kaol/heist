@@ -19,6 +19,8 @@ import           Control.Monad.RWS.Strict
 import           Control.Monad.State.Strict
 import qualified Data.Attoparsec.Text               as AP
 import           Data.ByteString                    (ByteString)
+import qualified Data.ByteString                    as B
+import           Data.Char
 import           Data.DList                         (DList)
 import qualified Data.DList                         as DL
 import qualified Data.HashMap.Strict                as H
@@ -179,8 +181,9 @@ compileTemplates'
 compileTemplates' = do
     hs <- getHS
     let tpathDocfiles :: [(TPath, DocumentFile)]
-        tpathDocfiles = map (\(a,b) -> (a, b))
-                            (H.toList $ _templateMap hs)
+        tpathDocfiles = filter ((/=) (fromIntegral $ ord '_')
+                                . B.head . head . fst)
+                               (H.toList $ _templateMap hs)
     foldM runOne H.empty tpathDocfiles
   where
     runOne tmap (tpath, df) = do
