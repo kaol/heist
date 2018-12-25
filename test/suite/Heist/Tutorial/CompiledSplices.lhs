@@ -78,7 +78,7 @@ An Example
 
 With that background, let's get to a real example.
 
-> stateSplice :: C.Splice (StateT Int IO)
+> stateSplice :: C.Splice (StateT Int IO) IO
 > stateSplice = return $ C.yieldRuntimeText $ do
 >     val <- lift get
 >     return $ pack $ show (val+1)
@@ -88,7 +88,7 @@ for a simple example that can clearly demonstrate the different contexts that
 we are operating in.  To make things more clear, here's a version with some
 print statements that clarify the details of which monad is executed when.
 
-> stateSplice2 :: C.Splice (StateT Int IO)
+> stateSplice2 :: C.Splice (StateT Int IO) IO
 > stateSplice2 = do
 >     -- :: C.Splice (StateT Int IO)
 >     lift $ putStrLn "This executed at load time"
@@ -107,8 +107,8 @@ directory with compiled splices.
 
 > load :: MonadIO n
 >      => FilePath
->      -> Splices (C.Splice n)
->      -> IO (HeistState n)
+>      -> Splices (C.Splice n IO)
+>      -> IO (HeistState n IO)
 > load baseDir splices = do
 >     tmap <- runExceptT $ do
 >         let sc = mempty & scLoadTimeSplices .~ defaultLoadTimeSplices
@@ -147,7 +147,7 @@ structure with a compiled splice.
 >     }
 > 
 > personSplices :: Monad n
->              => Splices (RuntimeSplice n Person -> C.Splice n)
+>              => Splices (RuntimeSplice n Person -> C.Splice n IO)
 > personSplices = mapV (C.pureSplice . C.textSplice) $ do
 >     "firstName" ## pFirstName
 >     "lastName" ## pLastName
@@ -155,10 +155,10 @@ structure with a compiled splice.
 > 
 > peopleSplice :: (Monad n)
 >              => RuntimeSplice n [Person]
->              -> C.Splice n
+>              -> C.Splice n IO
 > peopleSplice = C.manyWithSplices C.runChildren personSplices
 > 
-> allPeopleSplice :: C.Splice (StateT [Person] IO)
+> allPeopleSplice :: C.Splice (StateT [Person] IO) IO
 > allPeopleSplice = peopleSplice (lift get)
 > 
 > personListTest :: FilePath
@@ -247,7 +247,7 @@ appropriate Heist context.  You create a new empty promise in the HeistT n IO
 Here's an example of how to use a promise manually to render a splice
 differently in the case of failure.
 
-< failingSplice :: MonadSnap m => C.Splice m
+< failingSplice :: MonadSnap m => C.Splice m IO
 < failingSplice = do
 <     promise <- C.newEmptyPromise
 <     outputChildren <- C.withSplices C.runChildren splices (C.getPromise promise)
@@ -267,7 +267,7 @@ differently in the case of failure.
 <   
 <   
 < splices :: Monad n
-<         => Splices (RuntimeSplice n (Text, Text) -> C.Splice n)
+<         => Splices (RuntimeSplice n (Text, Text) -> C.Splice n IO)
 < splices = mapS (C.pureSplice . C.htmlNodeSplice) $ do
 <   "user"  ## (:[]) . TextNode . fst
 <   "value" ## (:[]) . TextNode . snd

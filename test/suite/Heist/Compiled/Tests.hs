@@ -75,7 +75,7 @@ peopleTest = do
     expected =
       "\n<p>Doe, John: 42&#32;years old</p>\n\n<p>Smith, Jane: 21&#32;years old</p>\n\n"
 
-templateHC :: HeistConfig IO
+templateHC :: HeistConfig IO IO
 templateHC = HeistConfig sc "" False
   where
     sc = mempty & scLoadTimeSplices .~ defaultLoadTimeSplices
@@ -208,7 +208,7 @@ nsNestedUnused = do
                 & scTemplateLocations .~ [loadTemplates "templates-ns-nested"]
 
 
-nsBindTemplateHC :: String -> HeistConfig IO
+nsBindTemplateHC :: String -> HeistConfig IO IO
 nsBindTemplateHC dir = HeistConfig sc "h" False
   where
     sc = mempty & scLoadTimeSplices .~ defaultLoadTimeSplices
@@ -216,7 +216,7 @@ nsBindTemplateHC dir = HeistConfig sc "h" False
                 & scTemplateLocations .~ [loadTemplates dir]
 
 
-nsBindTestSplices :: Splices (Splice IO)
+nsBindTestSplices :: Splices (Splice IO IO)
 nsBindTestSplices = do
     "call" ## do
         tpl <- withSplices (callTemplate "_call")
@@ -226,13 +226,13 @@ nsBindTestSplices = do
     "main2" ## nsBindSubImpl (return ())
 
 
-nsBindSubImpl :: RuntimeSplice IO b -> Splice IO
+nsBindSubImpl :: RuntimeSplice IO b -> Splice IO IO
 nsBindSubImpl _ = do
     tpl <- withSplices runChildren nsBindSubSplices (return ())
     return $ yieldRuntime $ codeGen tpl
 
 
-nsBindSubSplices :: Splices (RuntimeSplice IO () -> Splice IO)
+nsBindSubSplices :: Splices (RuntimeSplice IO () -> Splice IO IO)
 nsBindSubSplices = do
     "sub" ## pureSplice . textSplice $ const "asdf"
     "recurse" ## nsBindSubImpl
